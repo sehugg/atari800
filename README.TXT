@@ -37,5 +37,6 @@ Project homepage: http://atari800.github.io/
 
 ## Emscripten Build (libatari800)
 
-emconfigure ./configure --target=libatari800 --disable-rserial
+emconfigure ./configure --target=libatari800 --disable-rserial --disable-rnetwork --disable-riodevice
+emmake make
 cd wasm && make
