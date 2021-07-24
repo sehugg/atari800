@@ -33,3 +33,9 @@ December 28, 2019
 E-mail: pstehlik@sophics.cz
 
 Project homepage: http://atari800.github.io/
+
+
+## Emscripten Build
+
+	emconfigure ./configure --target=libatari800 --disable-rserial
+	cd wasm && make
