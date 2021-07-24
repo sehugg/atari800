@@ -37,6 +37,10 @@ Project homepage: http://atari800.github.io/
 
 ## Emscripten Build (libatari800)
 
+# requires emsdk environment
 emconfigure ./configure --target=libatari800 --disable-rserial --disable-rnetwork --disable-riodevice
 emmake make
 cd wasm && make
+
+# requires node 14.x+ (?)
+node --experimental-wasm-bigint testwasm.js
