@@ -8,15 +8,21 @@
 const wasi = require('@wasmer/wasi')
 const nodeBindings = require("@wasmer/wasi/lib/bindings/node");
 const wasmfs = require('@wasmer/wasmfs')
+const { spy } = require('spyfs')
 
 var fs = new wasmfs.WasmFs()
 
 var bindings = Object.create(nodeBindings.default);
 bindings.fs = fs.fs;
+fs.fs.mkdirSync('/tmp')
+
+var preopen = {};
+preopen['/tmp'] = '/tmp' //process.cwd()
+console.log(preopen)
 
 let myWASIInstance = new wasi.WASI({
   // OPTIONAL: The pre-opened dirctories
-  preopenDirectories: {},
+  preopenDirectories: preopen,
 
   // OPTIONAL: The environment vars
   env: {},
@@ -74,9 +80,9 @@ console.log(atari8.machine_max_display_size());
 console.log(atari8.machine_display_width(sys));
 console.log(atari8.machine_display_height(sys));
 
-console.log(atari8.machine_start_frame(sys));
-console.log(atari8.machine_start_frame(sys));
-console.log(atari8.machine_start_frame(sys));
+for (var i=0; i<100; i++) {
+  atari8.machine_start_frame(sys);
+}
 
 console.log('pixels', atari8.machine_get_pixel_buffer(sys));
 
@@ -90,6 +96,16 @@ const pixels = new Uint8Array(
 );
 
 require('fs').writeFileSync('testatari8.rgba', pixels);
+
+//fs.fs.writeFileSync('/tmp/atari8.img', pixels);
+//fs.fs.readFileSync('/tmp/atari8.img');
+
+var errno = atari8.machine_load_rom(sys, 0, 1000);
+if (!errno) {
+  console.log('rom loaded')
+} else {
+  console.log('could not load rom', errno)
+}
 
 //console.log('probe', atari8.machine_get_probe_buffer_size());
 

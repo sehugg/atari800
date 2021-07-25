@@ -1,10 +1,12 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <errno.h>
 
 #include "colours.h"
 #include "screen.h"
 #include "atari.h"
+#include "cpu.h"
 #include "libatari800.h"
 
 /* Dimensions of Screen_atari.
@@ -38,41 +40,41 @@ void audio_callback_fn(const float* samples, int num_samples, void* user_data) {
 }
 
 void machine_hardreset(atari8_t* sys) {
-        libatari800_clear_input_array(&sys->input);
-	char *test_args[] = {
-		"atari800",
-		"-atari",
-	};
-	libatari800_init(sizeof(test_args) / sizeof(test_args[0]), test_args);
+    Atari800_Coldstart();
 }
 
 atari8_t* machine_init(char* bios) {
     atari8_t* sys = (atari8_t*) malloc(sizeof(atari8_t));
-    machine_hardreset(sys);
+    libatari800_clear_input_array(&sys->input);
+    char *test_args[] = {
+            //"atari800",
+            "-xl",
+    };
+    libatari800_init(sizeof(test_args) / sizeof(test_args[0]), test_args);
     return sys;
 }
 
 void machine_reset(atari8_t* sys) {
-    //TODO
+    Atari800_Warmstart();
 }
 
 void machine_start_frame(atari8_t* sys) {
-    //TODO: should start frame, not execute entire frame...
-    libatari800_next_frame(&sys->input);
-    // update screen
-    int i=0;
-    UBYTE* colors = (UBYTE *)Screen_atari;
-    for (int y=0; y<Screen_HEIGHT; y++) {
-     for (int x=0; x<Screen_WIDTH; x++) {
-      int col = colors[i];
-      uint32_t rgba = 0xff000000;
-      rgba |= (Colours_GetR(col) << 0);
-      rgba |= (Colours_GetG(col) << 8);
-      rgba |= (Colours_GetB(col) << 16);
-      sys->rgba[i] = rgba;
-      i++;
-     }
-    }
+   //TODO: should start frame, not execute entire frame...
+   libatari800_next_frame(&sys->input);
+   // update screen
+   UBYTE* colors = (UBYTE *)Screen_atari;
+   int i=0;
+   for (int y=0; y<Screen_HEIGHT; y++) {
+      for (int x=0; x<Screen_WIDTH; x++) {
+         int col = colors[i];
+         uint32_t rgba = 0xff000000;
+         rgba |= (Colours_GetR(col) << 0);
+         rgba |= (Colours_GetG(col) << 8);
+         rgba |= (Colours_GetB(col) << 16);
+         sys->rgba[i] = rgba;
+         i++;
+      }
+   }
 }
 
 void machine_tick(atari8_t* sys) {
@@ -136,31 +138,49 @@ void machine_load_cpu_state(atari8_t* sys, const cpu_state_t* state) {
 }
 
 void machine_save_controls_state(const atari8_t* sys, Atari8ControlsState* state) {
-    //TODO
+    memcpy(state, &sys->input, sizeof(Atari8ControlsState));
 }
 
 void machine_load_controls_state(atari8_t* sys, const Atari8ControlsState* state) {
-    //TODO
+    memcpy(&sys->input, state, sizeof(Atari8ControlsState));
 }
 
 void machine_key_down(atari8_t* sys, int key_code) {
-    //TODO
+    sys->input.keychar = key_code & 0xff;
+    sys->input.shift = (key_code & 0x100) != 0;
+    sys->input.control = (key_code & 0x200) != 0;
+    sys->input.select = (key_code & 0x400) != 0;
+    sys->input.start = (key_code & 0x800) != 0;
 }
 
 void machine_key_up(atari8_t* sys, int key_code) {
+    sys->input.keychar = 0;
     //TODO
 }
 
-void machine_load_rom(atari8_t* sys, const uint8_t* ptr, int num_bytes) {
-    //TODO
+int machine_load_rom(atari8_t* sys, const uint8_t* ptr, int num_bytes) {
+    const char* filename = "/tmp/atari8.img";
+    /*
+    int fd = creat(filename, O_CREAT | O_TRUNC);
+    if (fd < 0) return errno ? errno : fd;
+    return 0;
+    */
+    FILE *f = fopen(filename, "wb");
+    if (f != NULL) {
+      fwrite(ptr, num_bytes, 1, f);
+      fclose(f);
+      libatari800_reboot_with_file(filename);
+      return 0;
+    }
+    return errno ? errno : -1;
 }
 
 unsigned int machine_cpu_get_pc(atari8_t* sys) {
-    return 0; //TODO
+    return CPU_regPC;
 }
 
 unsigned int machine_cpu_get_sp(atari8_t* sys) {
-    return 0; //TODO
+    return CPU_regS;
 }
 
 int machine_cpu_is_stable(atari8_t* sys) {
