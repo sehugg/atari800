@@ -1,4 +1,10 @@
 
+
+
+//const SegfaultHandler = require('segfault-handler');
+//SegfaultHandler.registerHandler('crash.log');
+
+
 const wasi = require('@wasmer/wasi')
 const nodeBindings = require("@wasmer/wasi/lib/bindings/node");
 const wasmfs = require('@wasmer/wasmfs')
@@ -51,8 +57,35 @@ imports.env = {
   emscripten_thread_sleep: stub,
 }
 var winst = new WebAssembly.Instance(wmod, imports);
-//console.log(winst)
+console.log(winst)
 myWASIInstance.start(winst);
-//console.log(winst.exports);
-winst.exports.machine_init();
+var atari8 = winst.exports;
+//console.log(atari8);
+console.log('init')
+const sys = atari8.machine_init();
+console.log('sys',sys)
+
+atari8.machine_reset(sys)
+
+console.log(atari8.atari8_std_display_width())
+console.log(atari8.atari8_std_display_height())
+console.log(atari8.atari8_max_display_size());
+
+console.log(atari8.atari8_display_width(sys));
+console.log(atari8.atari8_display_height(sys));
+
+console.log('pixels', atari8.machine_get_pixel_buffer(sys));
+
+atari8.machine_tick(sys);
+atari8.atari8_exec(sys, 100000);
+
+const pixels = new Uint8Array(
+  atari8.memory.buffer,
+  atari8.machine_get_pixel_buffer(sys),
+  atari8.atari8_max_display_size()
+);
+
+fs.writeFileSync('testatari8.rgba', pixels);
+
+console.log('probe', atari8.machine_get_probe_buffer_size());
 
