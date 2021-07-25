@@ -67,25 +67,29 @@ console.log('sys',sys)
 
 atari8.machine_reset(sys)
 
-console.log(atari8.atari8_std_display_width())
-console.log(atari8.atari8_std_display_height())
-console.log(atari8.atari8_max_display_size());
+console.log(atari8.machine_std_display_width())
+console.log(atari8.machine_std_display_height())
+console.log(atari8.machine_max_display_size());
 
-console.log(atari8.atari8_display_width(sys));
-console.log(atari8.atari8_display_height(sys));
+console.log(atari8.machine_display_width(sys));
+console.log(atari8.machine_display_height(sys));
+
+console.log(atari8.machine_start_frame(sys));
+console.log(atari8.machine_start_frame(sys));
+console.log(atari8.machine_start_frame(sys));
 
 console.log('pixels', atari8.machine_get_pixel_buffer(sys));
 
 atari8.machine_tick(sys);
-atari8.atari8_exec(sys, 100000);
+atari8.machine_exec(sys, 100000);
 
 const pixels = new Uint8Array(
   atari8.memory.buffer,
   atari8.machine_get_pixel_buffer(sys),
-  atari8.atari8_max_display_size()
+  atari8.machine_max_display_size()
 );
 
-fs.writeFileSync('testatari8.rgba', pixels);
+require('fs').writeFileSync('testatari8.rgba', pixels);
 
-console.log('probe', atari8.machine_get_probe_buffer_size());
+//console.log('probe', atari8.machine_get_probe_buffer_size());
 
