@@ -34,10 +34,20 @@ E-mail: pstehlik@sophics.cz
 
 Project homepage: http://atari800.github.io/
 
+# libatari800
 
-## Emscripten Build (libatari800)
+## wasi-sdk build
 
-# Requires emsdk environment:
+install: https://github.com/WebAssembly/wasi-sdk
+
+	cp $(WASISDK)/share/misc/config.* .
+	./configure --target=libatari800 --disable-rserial --disable-rnetwork --disable-riodevice CC="$WASISDK/bin/clang --sysroot=$WASISDK/share/wasi-sysroot" --host=wasm32
+	make
+	$(WASISDK)/bin/ranlib src/*.a
+	cd wasm
+	make
+
+## Emscripten Build (doesn't work!!!)
 
 Install from https://github.com/emscripten-core/emsdk
 

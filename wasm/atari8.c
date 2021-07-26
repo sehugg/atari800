@@ -39,18 +39,28 @@ void audio_callback_fn(const float* samples, int num_samples, void* user_data) {
     }
 }
 
+///
+
+int main(int argc, char** argv) {
+ // can't have any code that interacts with the wrapper...?
+}
+
+///
+
+
 void machine_hardreset(atari8_t* sys) {
     Atari800_Coldstart();
 }
 
 atari8_t* machine_init(char* bios) {
-    atari8_t* sys = (atari8_t*) malloc(sizeof(atari8_t));
-    libatari800_clear_input_array(&sys->input);
+ // TODO: real args?
     char *test_args[] = {
             //"atari800",
             "-xl",
     };
     libatari800_init(sizeof(test_args) / sizeof(test_args[0]), test_args);
+    atari8_t* sys = (atari8_t*) malloc(sizeof(atari8_t));
+    libatari800_clear_input_array(&sys->input);
     return sys;
 }
 
@@ -166,6 +176,7 @@ int machine_load_rom(atari8_t* sys, const uint8_t* ptr, int num_bytes) {
     return 0;
     */
     FILE *f = fopen(filename, "wb");
+    printf("load_rom '%s' %p\n", filename, f);
     if (f != NULL) {
       fwrite(ptr, num_bytes, 1, f);
       fclose(f);

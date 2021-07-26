@@ -15,9 +15,18 @@ var fs = new wasmfs.WasmFs()
 var bindings = Object.create(nodeBindings.default);
 bindings.fs = fs.fs;
 fs.fs.mkdirSync('/tmp')
+fs.fs.writeFileSync('.atari800.cfg', 'test');
+
+const stdoutWrite = buffer => {
+  console.log('>>>',buffer.toString());
+  return buffer.length
+}
+fs.volume.fds[1].write = stdoutWrite.bind(this);
+fs.volume.fds[2].write = stdoutWrite.bind(this);
 
 var preopen = {};
 preopen['/tmp'] = '/tmp' //process.cwd()
+preopen['.'] = '.' //process.cwd()
 console.log(preopen)
 
 let myWASIInstance = new wasi.WASI({
@@ -43,24 +52,35 @@ let myWASIInstance = new wasi.WASI({
     // path: Path  (with similar API Interface as Node 'path' module)
 });
 
-function stub() {
-  console.log('stub');
+function stub(name) {
+  return function() {
+    console.log('stub',name);
+  }
+}
+
+function allocString(str) {
+  var m = atari8.malloc(str.length+1);
+  console.log('alloc',str,m);
+  for (var i=0; i<str.length; i++)
+    m[i] = str.charCodeAt(i); //TODO: utf8
+  m[i] = 0;
+  return m;
 }
 
 var wasmbin = require('fs').readFileSync('atari8.wasm')
 var wmod = new WebAssembly.Module(wasmbin)
 var imports = myWASIInstance.getImports(wmod);
 imports.env = {
-  system: stub,
-  __sys_mkdir: stub,
-  __sys_chmod: stub,
-  __sys_stat64: stub,
-  __sys_unlink: stub,
-  __sys_rename: stub,
-  __sys_getdents64: stub,
-  __sys_getcwd: stub,
-  __sys_rmdir: stub,
-  emscripten_thread_sleep: stub,
+  system: stub('system'),
+  __sys_mkdir: stub('sys_mkdir'),
+  __sys_chmod: stub('sys_chmod'),
+  __sys_stat64: stub('sys_stat64'),
+  __sys_unlink: stub('sys_unlink'),
+  __sys_rename: stub('sys_rename'),
+  __sys_getdents64: stub('sys_getdents64'),
+  __sys_getcwd: function() { return allocString('/tmp') }, //stub('sys_getcwd'),
+  __sys_rmdir: stub('sys_rmdir'),
+  emscripten_thread_sleep: stub('thread_sleep'),
 }
 var winst = new WebAssembly.Instance(wmod, imports);
 console.log(winst)
