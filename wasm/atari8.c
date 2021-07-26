@@ -7,6 +7,8 @@
 #include "screen.h"
 #include "atari.h"
 #include "cpu.h"
+#include "antic.h"
+#include "input.h"
 #include "libatari800.h"
 
 /* Dimensions of Screen_atari.
@@ -61,6 +63,7 @@ atari8_t* machine_init(char* bios) {
     libatari800_init(sizeof(test_args) / sizeof(test_args[0]), test_args);
     atari8_t* sys = (atari8_t*) malloc(sizeof(atari8_t));
     libatari800_clear_input_array(&sys->input);
+    Colours_SetPreset(COLOURS_PRESET_VIBRANT);
     return sys;
 }
 
@@ -139,12 +142,19 @@ void machine_load_state(atari8_t* sys, const emulator_state_t* state) {
     libatari800_restore_state((emulator_state_t*)state);
 }
 
-void machine_save_cpu_state(const atari8_t* sys, cpu_state_t* state) {
-    //TODO
+void machine_save_cpu_state(const atari8_t* sys, uint8_t* state) {
+    state[0] = CPU_regA;
+    state[1] = CPU_regP;
+    state[2] = CPU_regS;
+    state[3] = CPU_regX;
+    state[4] = CPU_regY;
+    state[5] = CPU_IRQ;
+    state[6] = CPU_regPC;
+    state[7] = CPU_regPC >> 8;
 }
 
-void machine_load_cpu_state(atari8_t* sys, const cpu_state_t* state) {
-    // TODO
+void machine_load_cpu_state(atari8_t* sys, const uint8_t* state) {
+    // TODO: not needed?
 }
 
 void machine_save_controls_state(const atari8_t* sys, Atari8ControlsState* state) {
@@ -159,30 +169,51 @@ void machine_key_down(atari8_t* sys, int key_code) {
     sys->input.keychar = key_code & 0xff;
     sys->input.shift = (key_code & 0x100) != 0;
     sys->input.control = (key_code & 0x200) != 0;
-    sys->input.select = (key_code & 0x400) != 0;
-    sys->input.start = (key_code & 0x800) != 0;
+    sys->input.option = (key_code & 0x800) != 0;
+    sys->input.select = (key_code & 0x1000) != 0;
+    sys->input.start = (key_code & 0x2000) != 0;
 }
 
 void machine_key_up(atari8_t* sys, int key_code) {
     sys->input.keychar = 0;
-    //TODO
+    //TODO?
+}
+
+void machine_joy_set(atari8_t* sys, int joyindex, int bits) {
+    switch (joyindex) {
+       case 0: sys->input.joy0 = bits; sys->input.trig0 = bits>>8; break;
+       case 1: sys->input.joy1 = bits; sys->input.trig1 = bits>>8; break;
+       case 2: sys->input.joy2 = bits; sys->input.trig2 = bits>>8; break;
+       case 3: sys->input.joy3 = bits; sys->input.trig3 = bits>>8; break;
+    }
+}
+
+void machine_paddle_set(atari8_t* sys, int device, int value) {
+    sys->input.mouse_mode = INPUT_MOUSE_ST;
+    switch (device) {
+      case 0: sys->input.mousex = value; break;
+      case 1: sys->input.mousey = value; break;
+    }
+}
+
+void atari8_mouse_set(atari8_t* sys, int mousex, int mousey, int buttons, int mode) {
+    sys->input.mousex = mousex;
+    sys->input.mousey = mousey;
+    sys->input.mouse_buttons = buttons;
+    sys->input.mouse_mode = mode;
 }
 
 int machine_load_rom(atari8_t* sys, const uint8_t* ptr, int num_bytes) {
     const char* filename = "/tmp/atari8.img";
-    /*
-    int fd = creat(filename, O_CREAT | O_TRUNC);
-    if (fd < 0) return errno ? errno : fd;
-    return 0;
-    */
     FILE *f = fopen(filename, "wb");
-    printf("load_rom '%s' %p\n", filename, f);
     if (f != NULL) {
       fwrite(ptr, num_bytes, 1, f);
       fclose(f);
-      libatari800_reboot_with_file(filename);
+      int type = libatari800_reboot_with_file(filename);
+      printf("machine_load_rom: loaded %d bytes file type %d\n", num_bytes, type);
       return 0;
     }
+    printf("machine_load_rom: error %d\n", errno);
     return errno ? errno : -1;
 }
 
@@ -199,7 +230,7 @@ int machine_cpu_is_stable(atari8_t* sys) {
 }
 
 int machine_get_raster_line(atari8_t* sys) {
-    return 0; //TODO
+    return ANTIC_ypos;
 }
 
 int machine_std_display_width() {
